@@ -34,10 +34,12 @@ target_link_libraries(
 )
 
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake;${CMAKE_MODULE_PATH}")
-include(libhid)
+include(cmake/libhid.cmake)
 
 
 
 # add tests
-enable_testing()
-add_subdirectory(tests)
+if(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
+    enable_testing()
+    add_subdirectory(tests)
+endif()
