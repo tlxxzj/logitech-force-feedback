@@ -25,6 +25,7 @@ target_include_directories(
 target_sources(
     ${LGFF_TARGET_NAME}
     PRIVATE
+    src/LogitechForceFeedback.cpp
     src/LogitechG29.cpp
 )
 

@@ -1,9 +1,9 @@
+#include <iostream>
+
 #include "lgff/LogitechG29.h"
 
-#include <libhid/HidManager.h>
 
-
-namespace logitech {
+namespace lgff {
 
 struct LogitechG29InputReport {
     /* 01 */ uint8_t id; /* report id 0x01 */
@@ -18,56 +18,76 @@ struct LogitechG29InputReport {
     /* 10 */ uint8_t ry;
     /* 11 */ uint8_t unknown[33];
     /* 44 */ uint8_t wheel[2];
-    /* 46 */ uint8_t accelerator[2];
+    /* 46 */ uint8_t throttle[2];
     /* 48 */ uint8_t brake[2];
     /* 50 */ uint8_t clutch[2];
     /* 52 */ uint8_t unknown2[3];
     /* 55 */ uint8_t buttons3; /* red rotary dial plus minus */
     /* 56 */ uint8_t unknown3[8];
 
-    static constexpr uint8_t kDpadMask = 0x0fu;
-    static constexpr uint8_t kSquareMask = 0x10u; 
-    static constexpr uint8_t kCrossMask = 0x20u;
-    static constexpr uint8_t kCircleMask = 0x40u;
-    static constexpr uint8_t kTriangleMask = 0x80u;
+    static inline constexpr uint8_t kDpadMask = 0x0fu;
+    static inline constexpr uint8_t kSquareMask = 0x10u; 
+    static inline constexpr uint8_t kCrossMask = 0x20u;
+    static inline constexpr uint8_t kCircleMask = 0x40u;
+    static inline constexpr uint8_t kTriangleMask = 0x80u;
 
-    static constexpr uint8_t kL1Mask = 0x01u;
-    static constexpr uint8_t kR1Mask = 0x02u;
-    static constexpr uint8_t kL2Mask = 0x04u;
-    static constexpr uint8_t kR2Mask = 0x08u;
+    static inline constexpr uint8_t kL1Mask = 0x01u;
+    static inline constexpr uint8_t kR1Mask = 0x02u;
+    static inline constexpr uint8_t kL2Mask = 0x04u;
+    static inline constexpr uint8_t kR2Mask = 0x08u;
 
-    static constexpr uint8_t kShareMask = 0x10u;
-    static constexpr uint8_t kOptionsMask = 0x20u;
-    static constexpr uint8_t kL3Mask = 0x40u;
-    static constexpr uint8_t kR3Mask = 0x80u;
+    static inline constexpr uint8_t kShareMask = 0x10u;
+    static inline constexpr uint8_t kOptionsMask = 0x20u;
+    static inline constexpr uint8_t kL3Mask = 0x40u;
+    static inline constexpr uint8_t kR3Mask = 0x80u;
 
-    static constexpr uint8_t kPsMask = 0x01u;
+    static inline constexpr uint8_t kPsMask = 0x01u;
 
-    static constexpr uint8_t kRedRotaryDialEnter = 0x01u;
-    static constexpr uint8_t kRedRotaryDialLeft = 0x02u;
-    static constexpr uint8_t kRedRotaryDialRight = 0x04u;
-    static constexpr uint8_t kMinusMask = 0x08u;
-    static constexpr uint8_t kPlusMask = 0x10u;
+    static inline constexpr uint8_t kRedDialEnterMask = 0x01u;
+    static inline constexpr uint8_t kRedDialLeftMask = 0x02u;
+    static inline constexpr uint8_t kRedDialRightMask = 0x04u;
+    static inline constexpr uint8_t kMinusMask = 0x08u;
+    static inline constexpr uint8_t kPlusMask = 0x10u;
 
-
-    inline uint16_t wheelValue() {
-        return * reinterpret_cast<uint16_t *>(&wheel);
+    /*
+    returns a value between -1.0 and +1.0
+    -1.0 corresponds to the left-most wheel position
+    +1.0 corresponds to the right-most wheel position
+    */
+    inline float wheelValue() {
+        int32_t intVal = * reinterpret_cast<uint16_t *>(&wheel);
+        float fVal = ((intVal * 2 - 0xffff) * 1.0)/ 0xffff;
+        return fVal;
     }
 
-    inline uint16_t acceleratorValue() {
-        return * reinterpret_cast<uint16_t *>(&accelerator);
+    /*
+    returns a value between 0.0 and 1.0
+    0.0 fully released
+    1.0 fully pressed
+    */
+    inline float throttleValue() {
+        int32_t intVal = * reinterpret_cast<uint16_t *>(&throttle);
+        float fVal = ((0xffff - intVal) * 1.0) / 0xffff;
+        return fVal;
     }
 
-    inline uint16_t brakeValue() {
-        return * reinterpret_cast<uint16_t *>(&brake);
+    inline float brakeValue() {
+        int32_t intVal = * reinterpret_cast<uint16_t *>(&brake);
+        float fVal = ((0xffff - intVal) * 1.0) / 0xffff;
+        return fVal;
     }
 
-    inline uint16_t clutchValue() {
-        return * reinterpret_cast<uint16_t *>(&clutch);
+    inline float clutchValue() {
+        int32_t intVal = * reinterpret_cast<uint16_t *>(&clutch);
+        float fVal = ((0xffff - intVal) * 1.0) / 0xffff;
+        return fVal;
     }
 
     inline uint8_t dpadValue() {
-        return hatSwitch & kDpadMask;
+        uint8_t val = hatSwitch & kDpadMask;
+        if(val == 8)
+            return 0;
+        return val + 1;
     }
 
     inline uint8_t crossValue() {
@@ -122,14 +142,14 @@ struct LogitechG29InputReport {
         return (buttons2 & kPsMask) ? 1 : 0;
     }
 
-    inline uint8_t redRotaryDialEnterValue() {
-        return (buttons3 & kRedRotaryDialEnter) ? 1 : 0;
+    inline uint8_t redDialEnterValue() {
+        return (buttons3 & kRedDialEnterMask) ? 1 : 0;
     }
 
-    inline int8_t redRotaryDialValue() {
-        if(buttons3 & kRedRotaryDialLeft)
+    inline int8_t redDialValue() {
+        if(buttons3 & kRedDialLeftMask)
             return -1;
-        else if(buttons3 & kRedRotaryDialRight)
+        else if(buttons3 & kRedDialRightMask)
             return 1;
         return 0;
     }
@@ -145,7 +165,7 @@ struct LogitechG29InputReport {
     LogitechG29State toState() {
         LogitechG29State state = {
             .wheel = wheelValue(),
-            .accelerator = acceleratorValue(),
+            .throttle = throttleValue(),
             .brake = brakeValue(),
             .clutch = clutchValue(),
             
@@ -168,8 +188,8 @@ struct LogitechG29InputReport {
             .optoins = optionsValue(),
             .share = shareValue(),
             .ps = psValue(),
-            .redDialEnter = redRotaryDialEnterValue(),
-            .redDial = redRotaryDialValue()
+            .redDialEnter = redDialEnterValue(),
+            .redDial = redDialValue()
         };
         return state;
     }
@@ -183,8 +203,17 @@ LogitechG29::LogitechG29(int32_t index) {
             { libhid::kHidDeviceFilterProductId, productId() }
         }
     };
+    return;
     auto devices = libhid::HidManager::getDevices(filters);
     mDevice = devices[index];
+
+    //sendCommand(kDontRevertIdentityCmd);
+    //sendCommand(kSwitchToG29WithUsbDetachCmd);
+}
+
+void LogitechG29::sendCommand(const ForceFeedbackCommand cmd) {
+    libhid::HidReport report(cmd, cmd + kForceFeedbackCommandSize);
+    mDevice->sendOutputReport(report);
 }
 
 LogitechG29State LogitechG29::getState() {
@@ -193,34 +222,53 @@ LogitechG29State LogitechG29::getState() {
     return g29Report->toState();
 }
 
-void LogitechG29::setRange(uint16_t range) {
-    range = std::clamp(range, minRange(), maxRange());
-    libhid::HidReport report = {
-        0xf8,
-        0x81,
-        uint8_t(range & 0x00ff),
-        uint8_t((range & 0xff00) >> 8),
+void LogitechG29::setWheelRange(uint16_t range) {
+    range = std::clamp(range, minWheelRange(), maxWheelRange());
+    
+    ForceFeedbackCommand cmd = {
+        kExtendedCmd,
+        kSetWheelRangeCmd,
+        static_cast<uint8_t>(range & 0x00ffu),
+        static_cast<uint8_t>((range & 0xff00u) >> 8),
         0x00,
         0x00,
         0x00
     };
-    mDevice->sendOutputReport(report);
+    sendCommand(cmd);
 }
 
-/*
-void LogitechG29::setLeds(uint8_t leds) {
-    libhid::HidReport report = {
-        0xf8,
-        0x12,
+
+void LogitechG29::setRpmLeds(uint8_t leds) {
+    ForceFeedbackCommand cmd = {
+        kExtendedCmd,
+        kSetRpmLedsCmd,
         leds,
         0x00,
         0x00,
         0x00,
         0x00
     };
-    mDevice->sendOutputReport(report);
+    sendCommand(cmd);
 }
-*/
+
+void LogitechG29::setAutocenter() {
+    ForceFeedbackCommand cmd = {
+        kSetDefaultSpringCmd,
+        kHighResolutionAutoCenteringSpringForce,
+
+    };
+    sendCommand(cmd);
+}
+
+void LogitechG29::setDeadBand(DeadBandParameter param) {
+    ForceFeedbackCommand cmd = { kSetDeadBandCmd, param, 0x00, 0x00, 0x00, 0x00, 0x00 };
+    sendCommand(cmd);
+
+    bool x= (UINT16_MAX == 0xffff);
+}
+
+
+
 
 
 }

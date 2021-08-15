@@ -30,13 +30,13 @@ TEST(G29Test, InputReportTest) {
     });
     std::this_thread::sleep_for(std::chrono::seconds(10000));
     */
-
-    auto g29 = logitech::LogitechG29(0);
+   return;
+    auto g29 = lgff::LogitechG29(0);
     while(false) {
         auto state = g29.getState();
         std::cerr<<"----------------------------"<<std::endl;
         std::cerr<<"Wheel: "<<state.wheel<<std::endl;
-        std::cerr<<"Accelerator: "<<state.accelerator<<std::endl;
+        std::cerr<<"Throttle: "<<state.throttle<<std::endl;
         std::cerr<<"Brake: "<<state.brake<<std::endl;
         std::cerr<<"Clutch: "<<state.clutch<<std::endl;
         std::cerr<<"Dpad: "<<(int)state.dpad<<std::endl;
@@ -61,7 +61,8 @@ TEST(G29Test, InputReportTest) {
 }
 
 TEST(G29Test, OutputReportTest) {
-    auto g29 = logitech::LogitechG29(0);
-    g29.setRange(500);
-    std::this_thread::sleep_for(std::chrono::seconds(10000));
+    auto g29 = lgff::LogitechG29(0);
+    g29.setWheelRange(500);
+    g29.setDeadBand(lgff::kDeadBandOn);
+    //std::this_thread::sleep_for(std::chrono::seconds(10000));
 }

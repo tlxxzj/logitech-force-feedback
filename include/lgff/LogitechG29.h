@@ -6,15 +6,44 @@
 #include "lgff/LogitechForceFeedback.h"
 
 
-namespace logitech {
+namespace lgff {
 
 struct LogitechG29State {
-    uint16_t wheel;
-    uint16_t accelerator;
-    uint16_t brake;
-    uint16_t clutch;
+    /*
+    a value between -1.0 and +1.0
+    -1.0 corresponds to the left-most wheel position
+    +1.0 corresponds to the right-most wheel position
+    */
+    float wheel;
 
+    /*
+    a value between 0.0 and 1.0
+    0.0 fully released
+    1.0 fully pressed
+    */
+    float throttle;
+    float brake;
+    float clutch;
+
+    /*
+    a value between 0 and 8
+    0: neutral
+    1: up
+    2: up and right
+    3: right
+    4: right and down
+    5: down
+    6: down and left
+    7: left
+    8: left and up
+    */
     uint8_t dpad;
+    
+    /*
+    a value either 0 or 1
+    0 released
+    1 pressed
+    */
     uint8_t cross;
     uint8_t square;
     uint8_t triangle;
@@ -35,6 +64,13 @@ struct LogitechG29State {
     uint8_t ps;
     
     uint8_t redDialEnter;
+    
+    /*
+    a value in (0, -1, 1)
+    0 neutral
+    -1 left
+    1 right
+    */
     int8_t redDial;
 };
 
@@ -42,17 +78,26 @@ struct LogitechG29State {
 class LogitechG29: public LogitechForceFeedbackWheel {
 protected:
     std::shared_ptr<libhid::HidDevice> mDevice;
+    
 
 public:
-    std::string name() const { return "G29 Driving Force Racing Wheel"; };
-    uint16_t vendorId() const  { return 0x046du; };
-    uint16_t productId() const { return 0xc260u; };
-    uint16_t minRange() const { return 40u; };
-    uint16_t maxRange() const { return 900u; };
+    std::string name() const override { return "G29 Driving Force Racing Wheel"; };
+    uint16_t vendorId() const override { return 0x046du; };
+    uint16_t productId() const override { return 0xc260u; };
+    uint16_t minWheelRange() const override { return 40u; };
+    uint16_t maxWheelRange() const override { return 900u; };
+
+    void sendCommand(const ForceFeedbackCommand command) override;
+
+public:
 
     LogitechG29(int32_t index = 0);
-    void setRange(uint16_t range);
     LogitechG29State getState();
+    void setAutocenter();
+    void setWheelRange(uint16_t range);
+    void setRpmLeds(uint8_t leds);
+
+    void setDeadBand(DeadBandParameter param);
 };
 
 
